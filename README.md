@@ -57,6 +57,8 @@ Após o download, extraia o conteúdo para o diretório `./models/llama-2-7b.Q4_
 
 Se estiver usando linux, apenas cole no terminal:
 ```bash
+mkdir -p models
+cd models
 wget https://huggingface.co/TheBloke/Llama-2-7B-GGUF/resolve/main/llama-2-7b.Q4_K_M.gguf
 ```
 
