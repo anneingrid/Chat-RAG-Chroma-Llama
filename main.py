@@ -7,6 +7,13 @@ def setup_chroma():
     collection = chroma_client.get_or_create_collection("rag_collection")
     return collection
 
+def read_documents_from_txt(file_path):
+    with open(file_path, "r", encoding="utf-8") as file:
+        content = file.read()
+        documents = content.split("\n")
+        documents = [doc.strip() for doc in documents if doc.strip()]
+    return documents
+
 def add_documents(collection, texts):
     for i, text in enumerate(texts):
         collection.add(documents=[text], ids=[str(i)])
@@ -33,10 +40,11 @@ def generate_response(llm, context, query):
 if __name__ == "__main__":
     collection = setup_chroma()
     
-    documents = [
-        "O céu é azul porque a luz do sol se espalha na atmosfera.",
-        "A água ferve a 100 graus Celsius ao nível do mar."
-    ]
+    txt_file_path = "./documentos.txt" 
+    if not os.path.exists(txt_file_path):
+        raise FileNotFoundError(f"Arquivo {txt_file_path} não encontrado.")
+    
+    documents = read_documents_from_txt(txt_file_path)
     add_documents(collection, documents)
     
     llm = load_llm()
