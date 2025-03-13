@@ -55,6 +55,11 @@ Os scripts utilizam o modelo Llama para geração de linguagem. Você pode baixa
 
 Após o download, extraia o conteúdo para o diretório `./models/llama-2-7b.Q4_K_M.gguf`.
 
+Se estiver usando linux, apenas cole no terminal:
+```bash
+wget https://huggingface.co/TheBloke/Llama-2-7B-GGUF/resolve/main/llama-2-7b.Q4_K_M.gguf
+```
+
 ### 5. Execute os Scripts
 
 Após concluir os passos anteriores, você pode executar os scripts `main1.py` e `main2.py` conforme necessário.
