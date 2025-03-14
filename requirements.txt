@@ -1,2 +1,3 @@
-chromadb==0.3.21
-llama-cpp-python==0.1.48
+chromadb
+llama-cpp-python
+pydantic

@@ -1,6 +1,6 @@
-# Guia de configuração e execução dos scripts
+# Guia de Configuração e Execução dos Scripts
 
-Este guia fornece instruções detalhadas sobre como configurar o ambiente e executar os scripts `main1.py` e `main2.py`.
+Este guia fornece instruções detalhadas sobre como configurar o ambiente e executar os scripts `main.py`.
 
 ## Requisitos do Sistema
 
@@ -55,7 +55,7 @@ Os scripts utilizam o modelo Llama para geração de linguagem. Você pode baixa
 
 Após o download, extraia o conteúdo para o diretório `./models/llama-2-7b.Q4_K_M.gguf`.
 
-Se estiver usando linux, apenas cole no terminal:
+Se estiver usando Linux, apenas cole no terminal:
 ```bash
 mkdir -p models
 cd models
@@ -70,25 +70,13 @@ O script `main1.py`, apresenta as perguntas pré-definidas. No `main2.py` a perg
 - #### Windows:
 
   ```bash
-  python main1.py
-  ```
-  
-  ou
-  
-  ```bash
-  python main2.py
+  python main.py
   ```
 
 - #### Linux/macOS:
 
   ```bash
-  python3 main1.py
-  ```
-  
-  ou
-  
-  ```bash
-  python3 main2.py
+  python3 main.py
   ```
 
 Certifique-se de que os scripts estão no mesmo diretório do ambiente virtual ou ajuste os caminhos conforme necessário.
@@ -99,9 +87,12 @@ Certifique-se de que os scripts estão no mesmo diretório do ambiente virtual o
 
 - **Erro ao carregar o modelo Llama**: Certifique-se de que o caminho para o modelo está correto e que o arquivo `llama-2-7b.Q4_K_M.gguf` está no formato adequado.
 
+- **Erro de import no `pydantic`**: Caso veja um erro relacionado ao `pydantic`, tente reinstalar a biblioteca:
+  ```bash
+  pip install --upgrade pydantic
+  ```
+
 ## Referências
 
 - Documentação do ChromaDB: [https://docs.trychroma.com/](https://docs.trychroma.com/)
 - Repositório do Llama: [https://github.com/facebookresearch/llama](https://github.com/facebookresearch/llama)
-
-Seguindo este guia, você deverá ser capaz de configurar e executar os scripts `main1.py` e `main2.py` corretamente. Se encontrar problemas adicionais, consulte a documentação das bibliotecas utilizadas ou procure ajuda nas comunidades relacionadas.

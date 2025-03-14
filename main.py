@@ -1,9 +1,29 @@
 import chromadb
 from llama_cpp import Llama
 import os
+import whisper
+
+def transcreve_audio(audioEnviado):
+    model = whisper.load_model("turbo")
+    audio = whisper.load_audio(audioEnviado)
+    audio = whisper.pad_or_trim(audio)
+    # make log-Mel spectrogram and move to the same device as the model
+    mel = whisper.log_mel_spectrogram(audio, n_mels=model.dims.n_mels).to(model.device)
+
+    # detect the spoken language
+    _, probs = model.detect_language(mel)
+    print(f"Detected language: {max(probs, key=probs.get)}")
+
+    # decode the audio
+    options = whisper.DecodingOptions()
+    result = whisper.decode(model, mel, options)
+
+    # print the recognized text
+    return(result.text)
 
 def setup_chroma():
     chroma_client = chromadb.PersistentClient(path="./chroma_db")
+
     collection = chroma_client.get_or_create_collection("rag_collection")
     return collection
 
@@ -23,10 +43,10 @@ def retrieve_documents(collection, query, top_k=3):
     return results["documents"][0] if results["documents"] else []
 
 def load_llm():
-    model_path = "./models/llama-2-7b.Q4_K_M.gguf"
+    model_path = "./models/llama-2-7b-chat.Q2_K.gguf"
     if not os.path.exists(model_path):
         raise FileNotFoundError("Baixe um modelo GGUF compatível e coloque na pasta ./models")
-    return Llama(model_path=model_path)
+    return Llama(model_path=model_path, n_threads=4, device="cpu")
 
 def generate_response(llm, context, query):
     prompt = f"""Use as informações abaixo para responder:
@@ -39,12 +59,13 @@ def generate_response(llm, context, query):
 
 if __name__ == "__main__":
     collection = setup_chroma()
-    
-    txt_file_path = "./documentos.txt" 
+
+    txt_file_path = "./audio.mp3" 
     if not os.path.exists(txt_file_path):
         raise FileNotFoundError(f"Arquivo {txt_file_path} não encontrado.")
     
-    documents = read_documents_from_txt(txt_file_path)
+    documents = [transcreve_audio("audio.mp3")]
+    print(documents)
     add_documents(collection, documents)
     
     llm = load_llm()
