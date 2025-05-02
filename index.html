@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pergunta para o Modelo</title>
+
+  <!-- Bootstrap 5 CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Fonte Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <!-- Favicon -->
+  <link rel="icon" href="./images/logo.png" type="image/png">
+
+  <style>
+    body {
+      background-color: #fefefe;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .chat-container {
+      max-width: 1000px;
+      margin: 40px auto;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .logo {
+      width: 100px;
+      margin-bottom: 10px;
+    }
+
+    .chat-box {
+      max-height: 700px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+      padding: 10px;
+      text-align: left;
+    }
+
+    .message {
+      margin: 10px 0;
+      padding: 12px 18px;
+      border-radius: 20px;
+      max-width: 75%;
+      display: inline-block;
+      clear: both;
+      word-wrap: break-word;
+    }
+
+    .user {
+      background-color: #d8f3dc;
+      color: #034732;
+      float: right;
+      text-align: right;
+    }
+
+    .bot {
+      background-color: #caf0f8;
+      color: #023e8a;
+      float: left;
+      text-align: left;
+    }
+
+    .spinner-border {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+
+    .btn-send {
+      background-color: #f37187;
+      border: none;
+      color: #ffffff;
+      transition: background-color 0.3s;
+      width: 50px;
+    }
+
+    .btn-send:hover {
+      background-color: #efadb6;
+      color:#f37187;
+    }
+
+    .input-group input {
+      border-radius: 20px 0 0 20px;
+    }
+
+    .input-group button {
+      border-radius: 0 20px 20px 0;
+    }
+    
+    .loading-bot {
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="chat-container">
+    <img src="./images/logo1.png" alt="Logo" class="logo">
+
+    <h2 class="mb-4">Pergunte ao Modelo</h2>
+
+    <div id="chat" class="chat-box"></div>
+
+    <div class="input-group">
+      <input type="text" id="pergunta" class="form-control" placeholder="Digite sua pergunta..." />
+      <button id="sendButton" class="btn btn-send" onclick="enviarPergunta()">
+        <i id="sendIcon" class="bi bi-send"></i>
+        <div id="buttonSpinner" class="spinner-border text-light" role="status" style="display: none;">
+          <span class="visually-hidden">Carregando...</span>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    async function enviarPergunta() {
+      const perguntaInput = document.getElementById("pergunta");
+      const pergunta = perguntaInput.value.trim();
+      const chat = document.getElementById("chat");
+      const sendButton = document.getElementById("sendButton");
+      const sendIcon = document.getElementById("sendIcon");
+      const buttonSpinner = document.getElementById("buttonSpinner");
+
+      if (!pergunta) {
+        alert("Digite uma pergunta!");
+        return;
+      }
+
+      sendButton.disabled = true;
+      sendButton.style.backgroundColor = "#f37187"; // mantém o fundo rosa
+      sendIcon.style.display = "none";
+      buttonSpinner.style.display = "inline-block";
+      
+
+      // Adiciona a mensagem do usuário
+      const userMessage = document.createElement("div");
+      userMessage.className = "message user";
+      userMessage.textContent = pergunta;
+      chat.appendChild(userMessage);
+      perguntaInput.value = "";
+
+      // Cria o espaço para a resposta do bot com indicador de carregamento
+      const botLoadingMessage = document.createElement("div");
+      botLoadingMessage.className = "message bot loading-bot";
+      botLoadingMessage.textContent = "Buscando...";
+      chat.appendChild(botLoadingMessage);
+
+      chat.scrollTop = chat.scrollHeight;
+
+      try {
+        const response = await fetch(`/perguntar?q=${encodeURIComponent(pergunta)}`);
+        const data = await response.json();
+
+        // Substitui a mensagem de carregamento pela resposta real
+        botLoadingMessage.innerHTML = data.response;
+        botLoadingMessage.classList.remove("loading-bot");
+      } catch (error) {
+        botLoadingMessage.textContent = "Erro ao obter resposta.";
+      }
+
+      // Reativar o botão e esconder o spinner
+      sendButton.disabled = false;
+      buttonSpinner.style.display = "none";
+      sendIcon.style.display = "inline-block";
+      
+      chat.scrollTop = chat.scrollHeight;
+    }
+    
+    // Permitir enviar com Enter
+    document.getElementById("pergunta").addEventListener("keypress", function(event) {
+      if (event.key === "Enter") {
+        enviarPergunta();
+      }
+    });
+  </script>
+
+</body>
+</html>

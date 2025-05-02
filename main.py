@@ -1,83 +1,78 @@
-import chromadb
-from llama_cpp import Llama
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+import httpx
+import faiss
+import pickle
+from sentence_transformers import SentenceTransformer
 import os
-import whisper
 
-def transcreve_audio(audioEnviado):
-    model = whisper.load_model("turbo")
-    audio = whisper.load_audio(audioEnviado)
-    audio = whisper.pad_or_trim(audio)
-    # make log-Mel spectrogram and move to the same device as the model
-    mel = whisper.log_mel_spectrogram(audio, n_mels=model.dims.n_mels).to(model.device)
+app = FastAPI()
+app.mount("/images", StaticFiles(directory="images"), name="images")
 
-    # detect the spoken language
-    _, probs = model.detect_language(mel)
-    print(f"Detected language: {max(probs, key=probs.get)}")
+modelo_emb = SentenceTransformer('all-MiniLM-L6-v2')
 
-    # decode the audio
-    options = whisper.DecodingOptions()
-    result = whisper.decode(model, mel, options)
+index = faiss.read_index("base_faiss/index.faiss")
 
-    # print the recognized text
-    return(result.text)
+with open("base_faiss/textos.pkl", "rb") as f:
+    textos = pickle.load(f)
 
-def setup_chroma():
-    chroma_client = chromadb.PersistentClient(path="./chroma_db")
+arquivos = []
+for nome in os.listdir("dados"):
+    arquivos.append(nome)
 
-    collection = chroma_client.get_or_create_collection("rag_collection")
-    return collection
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    with open("index.html", "r") as f:
+        return f.read()
 
-def read_documents_from_txt(file_path):
-    with open(file_path, "r", encoding="utf-8") as file:
-        content = file.read()
-        documents = content.split("\n")
-        documents = [doc.strip() for doc in documents if doc.strip()]
-    return documents
-
-def add_documents(collection, texts):
-    for i, text in enumerate(texts):
-        collection.add(documents=[text], ids=[str(i)])
-
-def retrieve_documents(collection, query, top_k=3):
-    results = collection.query(query_texts=[query], n_results=top_k)
-    return results["documents"][0] if results["documents"] else []
-
-def load_llm():
-    model_path = "./models/llama-2-7b-chat.Q2_K.gguf"
-    if not os.path.exists(model_path):
-        raise FileNotFoundError("Baixe um modelo GGUF compatível e coloque na pasta ./models")
-    return Llama(model_path=model_path, n_threads=4, device="cpu")
-
-def generate_response(llm, context, query):
-    prompt = f"""Use as informações abaixo para responder:
-    {context}
-    Pergunta: {query}
-    Resposta:"""
+@app.get("/perguntar")
+async def perguntar(q: str):
+    query_embedding = modelo_emb.encode([q])
+    k = 3
+    distances, indices = index.search(query_embedding, k)
     
-    output = llm(prompt, max_tokens=200)
-    return output["choices"][0]["text"].strip()
-
-if __name__ == "__main__":
-    collection = setup_chroma()
-
-    txt_file_path = "./audio.mp3" 
-    if not os.path.exists(txt_file_path):
-        raise FileNotFoundError(f"Arquivo {txt_file_path} não encontrado.")
+    contexto = ""
+    references = []
     
-    documents = [transcreve_audio("audio.mp3")]
-    print(documents)
-    add_documents(collection, documents)
+    for i, idx in enumerate(indices[0]):
+        if idx < len(textos) and idx >= 0:
+            contexto += f"\nDocumento {i+1} ({arquivos[idx]}):\n{textos[idx]}\n"
+            references.append(f"{arquivos[idx]}")
     
-    llm = load_llm()
+    # Construir prompt com o contexto
+    prompt = f"""Com base APENAS nas informações abaixo, responda à pergunta do usuário.
+Se a informação não estiver no contexto, responda que não tem informação suficiente.
+Inclua referências aos documentos utilizados no formato (nome_do_arquivo).
 
-    while True:
-        query = input("\nDigite sua pergunta (ou 'sair' para encerrar): ").strip()
-        if query.lower() == "sair":
-            print("Encerrando...")
-            break
-        
-        retrieved_docs = retrieve_documents(collection, query)
-        context = "\n".join(retrieved_docs) if retrieved_docs else "Não encontrei informações relevantes."
-        
-        response = generate_response(llm, context, query)
-        print("\nResposta:", response)
+Contexto:
+{contexto}
+
+Pergunta: {q}
+
+Resposta:"""
+
+    url = "http://localhost:11434/api/generate"
+    headers = {
+        "Content-Type": "application/json",
+    }
+    data = {
+        "model": "gemma:2b",
+        "prompt": prompt,
+        "stream": False,
+        "max_tokens": 500
+    }
+
+    async with httpx.AsyncClient(timeout=200) as client:
+        try:
+            response = await client.post(url, json=data, headers=headers)
+            response.raise_for_status()
+            resposta = response.json().get("response", "Não consegui responder.")
+        except httpx.RequestError as e:
+            resposta = f"Erro ao fazer requisição: {str(e)}"
+        except httpx.HTTPStatusError as e:
+            resposta = f"Erro de status HTTP: {str(e)}"
+        except Exception as e:
+            resposta = f"Erro inesperado: {str(e)}"
+
+    return {"response": resposta, "references": references}
